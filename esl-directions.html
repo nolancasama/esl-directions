@@ -312,6 +312,8 @@ function update(dt) {
   let guard = 0;
   while (remaining > 0 && guard++ < 100) {
     if (char.aligned) {
+      // Apply queued command from previous frame's intersection stop
+      if (pendingGo) { char.moving = true; pendingGo = false; }
       if (char.pendingTurn !== 0) {
         char.facing = ((char.facing + char.pendingTurn) % 4 + 4) % 4;
         char.pendingTurn = 0;
@@ -342,7 +344,6 @@ function update(dt) {
       }
       if (isIntersection(char.col, char.row)) {
         char.moving = false;
-        if (pendingGo) { char.moving = true; pendingGo = false; }
         break;
       }
     } else {
@@ -1105,7 +1106,7 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
     return best;
   }
 
-  let lastCmdAt = 0, lastFiredIdx = -1;
+  let lastCmdAt = 0, lastFiredIdx = -1, lastCmd = null;
   rec.onresult = (ev) => {
     if (!active) return;
     const resIdx = ev.resultIndex; // index of the result that just changed
@@ -1114,8 +1115,8 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
     const cmd = matchCommand(t);
     if (!cmd) return;
     const now = performance.now();
-    if (now - lastCmdAt < 600) return; // backup: cross-session echo guard
-    lastCmdAt = now; lastFiredIdx = resIdx;
+    if (cmd === lastCmd && now - lastCmdAt < 150) return; // block same-command echo only
+    lastCmdAt = now; lastFiredIdx = resIdx; lastCmd = cmd;
     if      (cmd === "left")     turnLeft();
     else if (cmd === "right")    turnRight();
     else if (cmd === "straight") goStraight();
