@@ -17,8 +17,7 @@
   }
   .wrap { width: 100%; max-width: 1400px; }
 
-  .game-header { text-align: center; padding: 4px 0 8px; position: relative; display: flex; align-items: center; justify-content: center; }
-  .game-level { position: absolute; font-family: "Fredoka One", cursive; font-size: 18px; color: #ffd23b; letter-spacing: 0.5px; }
+  .game-header { text-align: center; padding: 4px 0 8px; }
   .game-title {
     font-family: "Fredoka One", "Trebuchet MS", cursive;
     font-size: 32px; color: #2b4a6b; letter-spacing: 2px; margin: 0;
@@ -126,7 +125,6 @@
 
   <div class="game-header">
     <div class="game-title">Matsubara Town</div>
-    <div class="game-level" id="levelDisplay"></div>
   </div>
 
   <div class="stage">
@@ -270,7 +268,6 @@ function showLevelSplash() {
   levelTimer = 0; levelTimerActive = false;
   document.getElementById("levelMsg").textContent = "Level " + level;
   document.getElementById("levelDest").textContent = missionSentence();
-  const ld = document.getElementById("levelDisplay"); if (ld) ld.textContent = "Level " + level;
   const splash = document.getElementById("levelSplash");
   splash.classList.add("show");
   setTimeout(() => {
@@ -469,7 +466,7 @@ function handleCaught() {
   ensureAudio(); playCaught();
   const banner = document.getElementById("banner");
   const msg = banner.querySelector(".msg");
-  msg.textContent = "👻 Boo! (" + lives + (lives === 1 ? " life" : " lives") + " left)";
+  msg.textContent = "👻 Boo!";
   msg.style.background = "rgba(150,20,210,0.92)";
   banner.classList.add("show");
   setTimeout(() => {
@@ -834,6 +831,14 @@ function drawTopHUD() {
   ctx.font = 'bold 16px "Trebuchet MS", sans-serif';
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillText(totalScore + " 点", bScore.x + bScore.w / 2, h / 2 + 1);
+
+  // --- Level number (top-right corner, cols 13-14) ---
+  if (level > 0) {
+    ctx.fillStyle = "rgba(255,255,255,0.72)";
+    ctx.font = 'bold 22px "Fredoka One", cursive';
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(level, 13.5 * TILE + TILE / 2, h / 2);
+  }
 }
 
 /* ----- HUD: bottom command blocks ----- */
@@ -951,17 +956,6 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 
-function alignLevelDisplay() {
-  const cvs = document.getElementById("game");
-  const hdr = document.querySelector(".game-header");
-  const ld  = document.getElementById("levelDisplay");
-  if (!cvs || !hdr || !ld) return;
-  const cr = cvs.getBoundingClientRect();
-  const hr = hdr.getBoundingClientRect();
-  ld.style.right = Math.max(0, hr.right - cr.right) + "px";
-}
-window.addEventListener("resize", alignLevelDisplay);
-requestAnimationFrame(alignLevelDisplay);
 
 document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
   if (e.target.closest('#startOverlay')) return; // click came from the overlay
