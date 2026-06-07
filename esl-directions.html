@@ -287,11 +287,13 @@ function pauseGame() {
   gamePaused = true;
   stopEngine();
   char.moving = false;
+  stopBGM();
 }
 function resumeGame() {
   if (gameOver) return;
   gamePaused = false;
   setStartOverlay(false);
+  startBGM();
   if (!gameStarted) {
     gameStarted = true;
     newDestination();
@@ -486,7 +488,7 @@ function handleCaught() {
 
 function handleGameOver() {
   gameOver = true; celebrating = true; levelTimerActive = false;
-  char.moving = false; stopEngine();
+  char.moving = false; stopEngine(); stopBGM();
   ensureAudio(); playCaught();
   document.getElementById("goScore").textContent = "最終スコア: " + totalScore + " 点";
   document.getElementById("gameOver").classList.add("show");
@@ -903,6 +905,63 @@ function missionSentence() {
   const art = NO_ARTICLE.has(destination.name) ? "" : "the ";
   return "Let's go to " + art + destination.name + "!";
 }
+
+/* ----- BGM ----- */
+(function setupBGM() {
+  const BPM  = 108;
+  const BEAT = 60 / BPM;
+
+  // G-major melody: [freq Hz, beats]  (0 = rest)
+  const SEQ = [
+    [392.0, 0.5], [493.9, 0.5], [587.3, 1.0],  // G4 B4 D5
+    [659.3, 0.5], [587.3, 0.5], [493.9, 1.0],  // E5 D5 B4
+    [440.0, 0.5], [392.0, 0.5], [440.0, 0.5], [523.3, 0.5], // A4 G4 A4 C5
+    [587.3, 1.0], [493.9, 0.5], [440.0, 0.5],  // D5 B4 A4
+    [392.0, 2.0],                                // G4 (long)
+  ];
+
+  let running = false, timer = null, nextTime = 0, idx = 0;
+
+  function note(freq, start, dur) {
+    if (!audioCtx || freq === 0) return;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = "triangle";
+    o.frequency.value = freq;
+    o.connect(g); g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(0.055, start + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + dur * 0.88);
+    o.start(start); o.stop(start + dur);
+  }
+
+  function pump() {
+    if (!running || !audioCtx) return;
+    const horizon = audioCtx.currentTime + 0.3;
+    while (nextTime < horizon) {
+      const [f, b] = SEQ[idx];
+      note(f, nextTime, b * BEAT);
+      nextTime += b * BEAT;
+      idx = (idx + 1) % SEQ.length;
+    }
+  }
+
+  window.startBGM = function () {
+    ensureAudio();
+    if (!audioCtx || running) return;
+    running = true;
+    nextTime = audioCtx.currentTime + 0.05;
+    idx = 0;
+    timer = setInterval(pump, 100);
+    pump();
+  };
+
+  window.stopBGM = function () {
+    running = false;
+    clearInterval(timer);
+    timer = null;
+  };
+})();
 
 /* ----- Audio ----- */
 let audioCtx = null, soundOn = true;
