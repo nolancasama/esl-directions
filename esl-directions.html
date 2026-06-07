@@ -1099,28 +1099,19 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
     return best;
   }
 
-  // "armed" guarantees one fire per spoken utterance: it is cleared when we
-  // fire and re-armed when the engine marks the utterance final (isFinal).
-  let armed = true, lastFireAt = 0;
+  let lastCmdAt = 0;
   rec.onresult = (ev) => {
     if (!active) return;
-    const last = ev.results[ev.results.length - 1];
-    const t = last[0].transcript.toLowerCase().trim();
-    const now = performance.now();
-
-    // Safety: if a segment never finalizes, re-arm after a long pause
-    if (!armed && now - lastFireAt > 2500) armed = true;
-
+    const t = ev.results[ev.results.length - 1][0].transcript.toLowerCase().trim();
     const cmd = matchCommand(t);
-    if (cmd && armed) {
-      armed = false;
-      lastFireAt = now;
-      if      (cmd === "left")     turnLeft();
-      else if (cmd === "right")    turnRight();
-      else if (cmd === "straight") goStraight();
-      else if (cmd === "stop")     stopMoving();
-    }
-    if (last.isFinal) armed = true; // ready for the next utterance
+    if (!cmd) return;
+    const now = performance.now();
+    if (now - lastCmdAt < 600) return;
+    lastCmdAt = now;
+    if      (cmd === "left")     turnLeft();
+    else if (cmd === "right")    turnRight();
+    else if (cmd === "straight") goStraight();
+    else if (cmd === "stop")     stopMoving();
   };
 
   rec.onerror = (ev) => {
