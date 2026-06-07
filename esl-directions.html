@@ -1077,7 +1077,7 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
     clearConfirm();
     resumeGame();
     overlay.classList.remove("show");
-    lastFiredIdx = -1; // reset on new session so first command isn't blocked
+    lastFiredKey = null;
   };
 
   function pauseListening() {
@@ -1106,17 +1106,16 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
     return best;
   }
 
-  let lastCmdAt = 0, lastFiredIdx = -1, lastCmd = null;
+  let lastFiredKey = null;
   rec.onresult = (ev) => {
     if (!active) return;
-    const resIdx = ev.resultIndex; // index of the result that just changed
-    if (resIdx === lastFiredIdx) return; // already fired for this result slot
+    const resIdx = ev.resultIndex;
     const t = ev.results[resIdx][0].transcript.toLowerCase().trim();
     const cmd = matchCommand(t);
     if (!cmd) return;
-    const now = performance.now();
-    if (cmd === lastCmd && now - lastCmdAt < 150) return; // block same-command echo only
-    lastCmdAt = now; lastFiredIdx = resIdx; lastCmd = cmd;
+    const key = `${resIdx}:${cmd}`;
+    if (key === lastFiredKey) return;
+    lastFiredKey = key;
     if      (cmd === "left")     turnLeft();
     else if (cmd === "right")    turnRight();
     else if (cmd === "straight") goStraight();
