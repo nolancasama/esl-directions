@@ -1115,6 +1115,7 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
     if (!cmd) return;
     const key = `${resIdx}:${cmd}`;
     if (key === lastFiredKey) return;
+    if (celebrating || gamePaused) return; // don't consume key slot while blocked
     lastFiredKey = key;
     if      (cmd === "left")     turnLeft();
     else if (cmd === "right")    turnRight();
