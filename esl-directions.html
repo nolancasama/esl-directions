@@ -243,8 +243,8 @@ let cmdKey = "";      // "left" | "straight" | "right" | "stop"
 let cmdTime = -999;
 
 /* ----- 3) MOVEMENT API ----- */
-function turnLeft()   { if (celebrating || gamePaused) return; char.pendingTurn -= 1; pendingGo = true; ensureAudio(); playBlip(); showCommand("left");     }
-function turnRight()  { if (celebrating || gamePaused) return; char.pendingTurn += 1; pendingGo = true; ensureAudio(); playBlip(); showCommand("right");    }
+function turnLeft()   { if (celebrating || gamePaused) return; char.pendingTurn -= 1; if (char.moving) pendingGo = true; ensureAudio(); playBlip(); showCommand("left");     }
+function turnRight()  { if (celebrating || gamePaused) return; char.pendingTurn += 1; if (char.moving) pendingGo = true; ensureAudio(); playBlip(); showCommand("right");    }
 function goStraight() { if (celebrating || gamePaused) return; char.moving = true; pendingGo = true; ensureAudio(); showCommand("straight"); }
 function stopMoving() {
   if (celebrating || gamePaused) return;
