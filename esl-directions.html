@@ -1082,7 +1082,7 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
 
   window.pauseSpeech = pauseListening;
 
-  let lastCmdAt = 0, lastFiredIdx = -1;
+  let lastCmdAt = 0, lastCmd = "", lastFiredIdx = -1;
   rec.onresult = (ev) => {
     if (!active) return;
     const resIdx = ev.results.length - 1;
@@ -1095,8 +1095,9 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
     else if (t.includes("stop"))        cmd = "stop";
     if (!cmd) return;
     const now = performance.now();
-    if (now - lastCmdAt < 800) return; // guard against multi-segment splits
-    lastCmdAt = now; lastFiredIdx = resIdx;
+    const cooldown = cmd === lastCmd ? 1200 : 400;
+    if (now - lastCmdAt < cooldown) return;
+    lastCmdAt = now; lastCmd = cmd; lastFiredIdx = resIdx;
     if      (cmd === "left")     turnLeft();
     else if (cmd === "right")    turnRight();
     else if (cmd === "straight") goStraight();
