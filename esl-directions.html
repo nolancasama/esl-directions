@@ -218,6 +218,7 @@ let lastDestName = null;
 let score = 0;
 let level = 0;
 let celebrating = false;
+let pendingGo = false;
 let blockedTimer = 0;
 let levelTimer = 0;
 let totalScore = 0;
@@ -242,12 +243,12 @@ let cmdKey = "";      // "left" | "straight" | "right" | "stop"
 let cmdTime = -999;
 
 /* ----- 3) MOVEMENT API ----- */
-function turnLeft()   { if (celebrating || gamePaused) return; char.pendingTurn -= 1; ensureAudio(); playBlip(); showCommand("left");     }
-function turnRight()  { if (celebrating || gamePaused) return; char.pendingTurn += 1; ensureAudio(); playBlip(); showCommand("right");    }
-function goStraight() { if (celebrating || gamePaused) return; char.moving = true;    ensureAudio();             showCommand("straight"); }
+function turnLeft()   { if (celebrating || gamePaused) return; char.pendingTurn -= 1; if (char.moving) pendingGo = true; ensureAudio(); playBlip(); showCommand("left");     }
+function turnRight()  { if (celebrating || gamePaused) return; char.pendingTurn += 1; if (char.moving) pendingGo = true; ensureAudio(); playBlip(); showCommand("right");    }
+function goStraight() { if (celebrating || gamePaused) return; char.moving = true; pendingGo = true; ensureAudio(); showCommand("straight"); }
 function stopMoving() {
   if (celebrating || gamePaused) return;
-  char.moving = false; ensureAudio(); showCommand("stop");
+  char.moving = false; pendingGo = false; ensureAudio(); showCommand("stop");
 }
 
 window.turnLeft = turnLeft; window.turnRight = turnRight;
@@ -286,7 +287,7 @@ function pauseGame() {
   if (gameOver) return;
   gamePaused = true;
   stopEngine();
-  char.moving = false;
+  char.moving = false; pendingGo = false;
   stopBGM();
 }
 function resumeGame() {
@@ -339,7 +340,11 @@ function update(dt) {
       if (char.col === destination.dest.col && char.row === destination.dest.row) {
         handleSuccess(); break;
       }
-      if (isIntersection(char.col, char.row)) { char.moving = false; break; }
+      if (isIntersection(char.col, char.row)) {
+        char.moving = false;
+        if (pendingGo) { char.moving = true; pendingGo = false; }
+        break;
+      }
     } else {
       char.x += (dx / dist) * remaining;
       char.y += (dy / dist) * remaining;
@@ -441,7 +446,7 @@ function handleSuccess() {
   const pts = Math.max(50, 500 - Math.floor(levelTimer) * 10);
   totalScore += pts;
   celebrating = true;
-  char.moving = false;
+  char.moving = false; pendingGo = false;
   playChime();
   const banner = document.getElementById("banner");
   banner.querySelector(".msg").textContent = PRAISE[Math.floor(Math.random() * PRAISE.length)];
@@ -464,7 +469,7 @@ function handleCaught() {
   if (lives <= 0) { handleGameOver(); return; }
   caughtByGhost = true;
   celebrating = true;
-  char.moving = false;
+  char.moving = false; pendingGo = false;
   ensureAudio(); playCaught();
   const banner = document.getElementById("banner");
   const msg = banner.querySelector(".msg");
@@ -488,7 +493,7 @@ function handleCaught() {
 
 function handleGameOver() {
   gameOver = true; celebrating = true; levelTimerActive = false;
-  char.moving = false; stopEngine(); stopBGM();
+  char.moving = false; pendingGo = false; stopEngine(); stopBGM();
   ensureAudio(); playCaught();
   document.getElementById("goScore").textContent = "最終スコア: " + totalScore + " 点";
   document.getElementById("gameOver").classList.add("show");
