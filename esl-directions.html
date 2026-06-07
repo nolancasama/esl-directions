@@ -809,7 +809,7 @@ function drawTopHUD() {
 
   // --- Lives (block 0) ---
   const bLives = blocks[0];
-  const MAX_LIVES = 5, headR = 8, gap = 5;
+  const MAX_LIVES = 5, headR = 10, gap = 6;
   const totalW = MAX_LIVES * headR * 2 + (MAX_LIVES - 1) * gap;
   const startX = bLives.x + bLives.w / 2 - totalW / 2 + headR;
   const cy = h / 2 + 2;
@@ -1082,20 +1082,19 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
 
   window.pauseSpeech = pauseListening;
 
-  let lastCmd = "", lastCmdAt = 0;
+  let lastFiredIdx = -1;
   rec.onresult = (ev) => {
     if (!active) return;
-    const result = ev.results[ev.results.length - 1];
-    const t = result[0].transcript.toLowerCase().trim();
+    const resIdx = ev.results.length - 1;
+    if (resIdx === lastFiredIdx) return; // interim + final both fire; only act once per utterance
+    const t = ev.results[resIdx][0].transcript.toLowerCase().trim();
     let cmd = "";
     if      (t.includes("left"))        cmd = "left";
     else if (t.includes("right"))       cmd = "right";
     else if (t.includes("go straight")) cmd = "straight";
     else if (t.includes("stop"))        cmd = "stop";
     if (!cmd) return;
-    const now = performance.now();
-    if (cmd === lastCmd && now - lastCmdAt < 900) return; // cooldown
-    lastCmd = cmd; lastCmdAt = now;
+    lastFiredIdx = resIdx;
     if      (cmd === "left")     turnLeft();
     else if (cmd === "right")    turnRight();
     else if (cmd === "straight") goStraight();
