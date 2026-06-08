@@ -312,7 +312,7 @@ function update(dt) {
   let guard = 0;
   while (remaining > 0 && guard++ < 100) {
     if (char.aligned) {
-      if (char.pendingTurn !== 0) {
+      if (char.pendingTurn !== 0 && isIntersection(char.col, char.row)) {
         char.facing = ((char.facing + char.pendingTurn) % 4 + 4) % 4;
         char.pendingTurn = 0;
       }
