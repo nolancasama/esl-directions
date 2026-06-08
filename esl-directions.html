@@ -190,8 +190,8 @@ const center = (i) => i * TILE + TILE / 2;
 
 /* ----- 2) CHARACTER SETUP ----- */
 const DIRS = [ {dc:0,dr:-1}, {dc:1,dr:0}, {dc:0,dr:1}, {dc:-1,dr:0} ];
-const SPEED_BASE  = 140;
-const SPEED_CHASE = 240;
+const SPEED_BASE  = 120;
+const SPEED_CHASE = 220;
 const ROT_SPEED   = 16;
 
 function getPlayerSpeed() {
@@ -218,7 +218,7 @@ let lastDestName = null;
 let score = 0;
 let level = 0;
 let celebrating = false;
-let pendingGo = false;
+let continuousMove = false;
 let blockedTimer = 0;
 let levelTimer = 0;
 let totalScore = 0;
@@ -231,7 +231,7 @@ let gamePaused = true;
 let gameStarted = false;
 
 /* ----- Ghost ----- */
-const GHOST_SPEED = 72;
+const GHOST_SPEED = 52;
 const ghost = {
   col: 9, row: 10, x: center(9), y: center(10),
   facing: 0, aligned: true, targetCol: 9, targetRow: 10,
@@ -243,12 +243,12 @@ let cmdKey = "";      // "left" | "straight" | "right" | "stop"
 let cmdTime = -999;
 
 /* ----- 3) MOVEMENT API ----- */
-function turnLeft()   { if (celebrating || gamePaused) return; char.pendingTurn -= 1; if (char.moving) pendingGo = true; ensureAudio(); playBlip(); showCommand("left");     }
-function turnRight()  { if (celebrating || gamePaused) return; char.pendingTurn += 1; if (char.moving) pendingGo = true; ensureAudio(); playBlip(); showCommand("right");    }
-function goStraight() { if (celebrating || gamePaused) return; char.moving = true; pendingGo = true; ensureAudio(); showCommand("straight"); }
+function turnLeft()   { if (celebrating || gamePaused) return; char.pendingTurn -= 1; continuousMove = true; char.moving = true; ensureAudio(); playBlip(); showCommand("left");  }
+function turnRight()  { if (celebrating || gamePaused) return; char.pendingTurn += 1; continuousMove = true; char.moving = true; ensureAudio(); playBlip(); showCommand("right"); }
+function goStraight() { if (celebrating || gamePaused) return; continuousMove = true; char.moving = true; ensureAudio(); showCommand("straight"); }
 function stopMoving() {
   if (celebrating || gamePaused) return;
-  char.moving = false; pendingGo = false; ensureAudio(); showCommand("stop");
+  continuousMove = false; char.moving = false; ensureAudio(); showCommand("stop");
 }
 
 window.turnLeft = turnLeft; window.turnRight = turnRight;
@@ -287,7 +287,7 @@ function pauseGame() {
   if (gameOver) return;
   gamePaused = true;
   stopEngine();
-  char.moving = false; pendingGo = false;
+  char.moving = false; continuousMove = false;
   stopBGM();
 }
 function resumeGame() {
@@ -312,8 +312,6 @@ function update(dt) {
   let guard = 0;
   while (remaining > 0 && guard++ < 100) {
     if (char.aligned) {
-      // Apply queued command from previous frame's intersection stop
-      if (pendingGo) { char.moving = true; pendingGo = false; }
       if (char.pendingTurn !== 0) {
         char.facing = ((char.facing + char.pendingTurn) % 4 + 4) % 4;
         char.pendingTurn = 0;
@@ -342,7 +340,7 @@ function update(dt) {
       if (char.col === destination.dest.col && char.row === destination.dest.row) {
         handleSuccess(); break;
       }
-      if (isIntersection(char.col, char.row)) {
+      if (isIntersection(char.col, char.row) && !continuousMove) {
         char.moving = false;
         break;
       }
@@ -447,7 +445,7 @@ function handleSuccess() {
   const pts = Math.max(50, 500 - Math.floor(levelTimer) * 10);
   totalScore += pts;
   celebrating = true;
-  char.moving = false; pendingGo = false;
+  char.moving = false; continuousMove = false;
   playChime();
   const banner = document.getElementById("banner");
   banner.querySelector(".msg").textContent = PRAISE[Math.floor(Math.random() * PRAISE.length)];
@@ -470,7 +468,7 @@ function handleCaught() {
   if (lives <= 0) { handleGameOver(); return; }
   caughtByGhost = true;
   celebrating = true;
-  char.moving = false; pendingGo = false;
+  char.moving = false; continuousMove = false;
   ensureAudio(); playCaught();
   const banner = document.getElementById("banner");
   const msg = banner.querySelector(".msg");
@@ -494,7 +492,7 @@ function handleCaught() {
 
 function handleGameOver() {
   gameOver = true; celebrating = true; levelTimerActive = false;
-  char.moving = false; pendingGo = false; stopEngine(); stopBGM();
+  char.moving = false; continuousMove = false; stopEngine(); stopBGM();
   ensureAudio(); playCaught();
   document.getElementById("goScore").textContent = "最終スコア: " + totalScore + " 点";
   document.getElementById("gameOver").classList.add("show");
