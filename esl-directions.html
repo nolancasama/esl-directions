@@ -197,11 +197,14 @@ const ROT_SPEED   = 16;
 function getPlayerSpeed() {
   if (level < 4) return SPEED_BASE;
   const dist = Math.hypot(char.x - ghost.x, char.y - ghost.y);
-  const START = 4.5 * TILE; // ghost this far away → normal speed
-  const FULL  = 1.5 * TILE; // ghost this close → full boost
+  const START = 4.5 * TILE;
+  const FULL  = 1.5 * TILE;
   if (dist >= START) return SPEED_BASE;
+  const d = DIRS[char.facing];
+  const dot = d.dc * (ghost.x - char.x) + d.dr * (ghost.y - char.y);
+  if (dot > 0) return SPEED_BASE; // ghost is ahead — no boost
   if (dist <= FULL)  return SPEED_CHASE;
-  const t = (dist - FULL) / (START - FULL); // 1 = far, 0 = close
+  const t = (dist - FULL) / (START - FULL);
   return SPEED_BASE + (SPEED_CHASE - SPEED_BASE) * (1 - t);
 }
 
@@ -243,8 +246,18 @@ let cmdKey = "";      // "left" | "straight" | "right" | "stop"
 let cmdTime = -999;
 
 /* ----- 3) MOVEMENT API ----- */
-function turnLeft()   { if (celebrating || gamePaused) return; char.pendingTurn -= 1; continuousMove = true; char.moving = true; ensureAudio(); playBlip(); showCommand("left");  }
-function turnRight()  { if (celebrating || gamePaused) return; char.pendingTurn += 1; continuousMove = true; char.moving = true; ensureAudio(); playBlip(); showCommand("right"); }
+function turnLeft() {
+  if (celebrating || gamePaused) return;
+  if (!char.moving) { char.facing = ((char.facing - 1) % 4 + 4) % 4; char.pendingTurn = 0; }
+  else { char.pendingTurn -= 1; }
+  ensureAudio(); playBlip(); showCommand("left");
+}
+function turnRight() {
+  if (celebrating || gamePaused) return;
+  if (!char.moving) { char.facing = ((char.facing + 1) % 4 + 4) % 4; char.pendingTurn = 0; }
+  else { char.pendingTurn += 1; }
+  ensureAudio(); playBlip(); showCommand("right");
+}
 function goStraight() { if (celebrating || gamePaused) return; continuousMove = true; char.moving = true; ensureAudio(); showCommand("straight"); }
 function stopMoving() {
   if (celebrating || gamePaused) return;
