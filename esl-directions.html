@@ -221,7 +221,6 @@ let lastDestName = null;
 let score = 0;
 let level = 0;
 let celebrating = false;
-let continuousMove = false;
 let blockedTimer = 0;
 let levelTimer = 0;
 let totalScore = 0;
@@ -234,7 +233,7 @@ let gamePaused = true;
 let gameStarted = false;
 
 /* ----- Ghost ----- */
-const GHOST_SPEED = 52;
+const GHOST_SPEED = 40;
 const ghost = {
   col: 9, row: 10, x: center(9), y: center(10),
   facing: 0, aligned: true, targetCol: 9, targetRow: 10,
@@ -258,10 +257,10 @@ function turnRight() {
   else { char.pendingTurn += 1; }
   ensureAudio(); playBlip(); showCommand("right");
 }
-function goStraight() { if (celebrating || gamePaused) return; continuousMove = true; char.moving = true; ensureAudio(); showCommand("straight"); }
+function goStraight() { if (celebrating || gamePaused) return; char.moving = true; ensureAudio(); showCommand("straight"); }
 function stopMoving() {
   if (celebrating || gamePaused) return;
-  continuousMove = false; char.moving = false; ensureAudio(); showCommand("stop");
+  char.moving = false; ensureAudio(); showCommand("stop");
 }
 
 window.turnLeft = turnLeft; window.turnRight = turnRight;
@@ -300,7 +299,7 @@ function pauseGame() {
   if (gameOver) return;
   gamePaused = true;
   stopEngine();
-  char.moving = false; continuousMove = false;
+  char.moving = false;
   stopBGM();
 }
 function resumeGame() {
@@ -353,7 +352,7 @@ function update(dt) {
       if (char.col === destination.dest.col && char.row === destination.dest.row) {
         handleSuccess(); break;
       }
-      if (isIntersection(char.col, char.row) && !continuousMove) {
+      if (isIntersection(char.col, char.row)) {
         char.moving = false;
         break;
       }
@@ -458,7 +457,7 @@ function handleSuccess() {
   const pts = Math.max(50, 500 - Math.floor(levelTimer) * 10);
   totalScore += pts;
   celebrating = true;
-  char.moving = false; continuousMove = false;
+  char.moving = false;
   playChime();
   const banner = document.getElementById("banner");
   banner.querySelector(".msg").textContent = PRAISE[Math.floor(Math.random() * PRAISE.length)];
@@ -481,7 +480,7 @@ function handleCaught() {
   if (lives <= 0) { handleGameOver(); return; }
   caughtByGhost = true;
   celebrating = true;
-  char.moving = false; continuousMove = false;
+  char.moving = false;
   ensureAudio(); playCaught();
   const banner = document.getElementById("banner");
   const msg = banner.querySelector(".msg");
@@ -505,7 +504,7 @@ function handleCaught() {
 
 function handleGameOver() {
   gameOver = true; celebrating = true; levelTimerActive = false;
-  char.moving = false; continuousMove = false; stopEngine(); stopBGM();
+  char.moving = false; stopEngine(); stopBGM();
   ensureAudio(); playCaught();
   document.getElementById("goScore").textContent = "最終スコア: " + totalScore + " 点";
   document.getElementById("gameOver").classList.add("show");
