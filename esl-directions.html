@@ -1058,6 +1058,7 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
   rec.lang = "en-US";
   rec.continuous = true;
   rec.interimResults = true;
+  rec.maxAlternatives = 5;
 
   let active = false;
   let started = false;
@@ -1102,16 +1103,18 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
   // Match the command whose keyword appears LAST in the transcript, so a
   // merged interim like "turn right go straight" fires the most recent word.
   const CMD_WORDS = [
-    ["left",     "turn left"],
-    ["right",    "turn right"],
-    ["straight", "go straight"],
-    ["stop",     "stop"],
+    ["left",     ["turn left", "turned left", "torn left", "tern left", "tun left", "go left"]],
+    ["right",    ["turn right", "turned right", "torn right", "tern right", "tun right", "go right", "turn light", "torn light", "go light"]],
+    ["straight", ["go straight", "go strait", "go strate", "go straight ahead", "straight ahead", "go ahead", "go estrait"]],
+    ["stop",     ["stop", "estop"]],
   ];
   function matchCommand(t) {
     let best = null, bestPos = -1;
-    for (const [cmd, word] of CMD_WORDS) {
-      const pos = t.lastIndexOf(word);
-      if (pos > bestPos) { bestPos = pos; best = cmd; }
+    for (const [cmd, phrases] of CMD_WORDS) {
+      for (const phrase of phrases) {
+        const pos = t.lastIndexOf(phrase);
+        if (pos > bestPos) { bestPos = pos; best = cmd; }
+      }
     }
     return best;
   }
@@ -1120,8 +1123,13 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
   rec.onresult = (ev) => {
     if (!active) return;
     const resIdx = ev.resultIndex;
-    const t = ev.results[resIdx][0].transcript.toLowerCase().trim();
-    const cmd = matchCommand(t);
+    const alts = ev.results[resIdx];
+    let cmd = null;
+    for (let i = 0; i < alts.length; i++) {
+      const t = alts[i].transcript.toLowerCase().trim();
+      cmd = matchCommand(t);
+      if (cmd) break;
+    }
     if (!cmd) return;
     const key = `${resIdx}:${cmd}`;
     if (key === lastFiredKey) return;
