@@ -57,6 +57,19 @@
   .stt-text.unmatched{ color: #c0392b; font-style: normal; }
   .stt-feedback { font-size: 13px; font-weight: bold; color: #e67e22; min-height: 18px; opacity: 0; transition: opacity .2s; }
   .stt-feedback.show { opacity: 1; }
+  .mic-btn {
+    width: 100%; padding: 10px 8px; border-radius: 10px;
+    border: 2px solid #ccc; background: #eee;
+    font-size: 15px; font-weight: bold; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: background .2s, border-color .2s, color .2s; color: #888;
+    font-family: inherit;
+  }
+  .mic-btn.on { background: #ffebee; border-color: #e53935; color: #c62828; animation: mic-pulse 1.5s ease-in-out infinite; }
+  @keyframes mic-pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(229,57,53,.4); }
+    50%      { box-shadow: 0 0 0 6px rgba(229,57,53,0); }
+  }
   canvas {
     width: 100%; height: auto; display: block;
     border-radius: 10px; border: 4px solid #fff;
@@ -179,6 +192,7 @@
     </div>
 
     <div class="options-panel">
+      <button id="mic-toggle" class="mic-btn">🎤 オフ</button>
       <label class="opt-row">
         <input type="checkbox" id="chk-continuous">
         直進し続ける
@@ -1100,15 +1114,22 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
 
   const rec = new SR();
   rec.lang = "en-US";
-  rec.continuous = true;
+  rec.continuous = false;
   rec.interimResults = true;
-  rec.maxAlternatives = 5;
+  rec.maxAlternatives = 8;
 
   let active = false;
   let started = false;
   let confirmTimer = null;
 
   function clearConfirm() { clearTimeout(confirmTimer); confirmTimer = null; }
+
+  const micBtn = document.getElementById("mic-toggle");
+  function syncMicBtn(on) {
+    if (!micBtn) return;
+    micBtn.textContent = on ? "🎤 聞いています" : "🎤 オフ";
+    micBtn.classList.toggle("on", on);
+  }
 
   function beginListening() {
     active = true;
@@ -1118,7 +1139,6 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
       rec.start();
     } catch (e) {
       if (e.name === "InvalidStateError") {
-        // Session already running — mic confirmed live
         clearConfirm();
         resumeGame();
         overlay.classList.remove("show");
@@ -1133,6 +1153,7 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
     resumeGame();
     overlay.classList.remove("show");
     lastFiredKey = null;
+    syncMicBtn(true);
   };
 
   function pauseListening() {
@@ -1140,24 +1161,36 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
     active = false;
     if (labelEl) labelEl.textContent = "▶ Resume";
     overlay.classList.add("show");
+    syncMicBtn(false);
   }
 
-  window.pauseSpeech = pauseListening;
+  window.pauseSpeech  = pauseListening;
+  window.beginSpeech  = beginListening;
 
-  // Match the command whose keyword appears LAST in the transcript, so a
-  // merged interim like "turn right go straight" fires the most recent word.
+  if (micBtn) {
+    micBtn.addEventListener("click", () => {
+      if (active) pauseListening(); else beginListening();
+    });
+  }
+
   const CMD_WORDS = [
     ["left",     ["turn left", "turned left", "torn left", "tern left", "tun left", "go left"]],
     ["right",    ["turn right", "turned right", "torn right", "tern right", "tun right", "go right", "turn light", "torn light", "go light"]],
     ["straight", ["go straight", "go strait", "go strate", "go straight ahead", "straight ahead", "go ahead", "go estrait"]],
     ["stop",     ["stop", "estop"]],
   ];
+  // Pre-compile with word boundaries; find last match so merged transcripts pick most recent command
+  const CMD_PATTERNS = CMD_WORDS.map(([cmd, phrases]) => [
+    cmd,
+    phrases.map(p => new RegExp('\\b' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g'))
+  ]);
   function matchCommand(t) {
     let best = null, bestPos = -1;
-    for (const [cmd, phrases] of CMD_WORDS) {
-      for (const phrase of phrases) {
-        const pos = t.lastIndexOf(phrase);
-        if (pos > bestPos) { bestPos = pos; best = cmd; }
+    for (const [cmd, patterns] of CMD_PATTERNS) {
+      for (const re of patterns) {
+        for (const m of t.matchAll(re)) {
+          if (m.index > bestPos) { bestPos = m.index; best = cmd; }
+        }
       }
     }
     return best;
