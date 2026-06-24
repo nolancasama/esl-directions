@@ -65,10 +65,15 @@
     transition: background .2s, border-color .2s, color .2s; color: #888;
     font-family: inherit;
   }
-  .mic-btn.on { background: #ffebee; border-color: #e53935; color: #c62828; animation: mic-pulse 1.5s ease-in-out infinite; }
+  .mic-btn.on      { background: #ffebee; border-color: #e53935; color: #c62828; animation: mic-pulse 1.5s ease-in-out infinite; }
+  .mic-btn.speaking{ background: #e8f5e9; border-color: #43a047; color: #1b5e20; animation: speech-pulse 0.4s ease-in-out infinite; }
   @keyframes mic-pulse {
     0%,100% { box-shadow: 0 0 0 0 rgba(229,57,53,.4); }
     50%      { box-shadow: 0 0 0 6px rgba(229,57,53,0); }
+  }
+  @keyframes speech-pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(67,160,71,.6); }
+    50%      { box-shadow: 0 0 0 8px rgba(67,160,71,0); }
   }
   canvas {
     width: 100%; height: auto; display: block;
@@ -1154,6 +1159,15 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
     overlay.classList.remove("show");
     lastFiredKey = null;
     syncMicBtn(true);
+  };
+
+  rec.onspeechstart = () => {
+    if (micBtn) micBtn.classList.add("speaking");
+    if (micBtn) micBtn.textContent = "🎤 ▶▶▶";
+  };
+  rec.onspeechend = () => {
+    if (micBtn) micBtn.classList.remove("speaking");
+    if (micBtn) micBtn.textContent = active ? "🎤 聞いています" : "🎤 オフ";
   };
 
   function pauseListening() {
