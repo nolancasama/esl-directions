@@ -181,7 +181,7 @@
     <div class="options-panel">
       <label class="opt-row">
         <input type="checkbox" id="chk-continuous">
-        Continuous Straight
+        直進し続ける
       </label>
       <div class="stt-box">
         <div id="stt-transcript" class="stt-text"></div>
@@ -1198,7 +1198,7 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
     }
     if (isFinal && !cmd) {
       showTranscript(topText, "unmatched");
-      showFeedback("❓ Not understood");
+      showFeedback("❓ 聞き取れませんでした");
       return;
     }
     if (!cmd) { showTranscript(topText, "interim"); return; }
