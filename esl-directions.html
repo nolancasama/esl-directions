@@ -24,12 +24,39 @@
     text-shadow: 2px 2px 0 rgba(180,210,240,.6);
   }
 
-  .stage { display: flex; justify-content: center; }
+  .stage { display: flex; justify-content: center; align-items: flex-start; gap: 12px; }
   .canvas-wrap {
     position: relative; line-height: 0;
     /* shrink to fit viewport height, keep aspect ratio */
     width: min(100%, calc((100vh - 58px) * 780 / 676));
+    flex-shrink: 1;
   }
+
+  /* ---- Options panel ---- */
+  .options-panel {
+    width: 190px; flex-shrink: 0;
+    border-radius: 10px; border: 4px solid #fff;
+    box-shadow: 0 6px 20px rgba(40,70,110,.28);
+    background: rgba(255,255,255,0.82);
+    padding: 14px 12px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .opt-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; font-weight: bold; color: #2b4a6b;
+    cursor: pointer; user-select: none;
+  }
+  .opt-row input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+  .stt-box {
+    background: rgba(0,0,0,0.06); border-radius: 8px; padding: 10px;
+    min-height: 80px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .stt-text { font-size: 13px; color: #999; font-style: italic; word-break: break-word; min-height: 18px; }
+  .stt-text.interim  { color: #aaa; }
+  .stt-text.matched  { color: #2e7d32; font-weight: bold; font-style: normal; }
+  .stt-text.unmatched{ color: #c0392b; font-style: normal; }
+  .stt-feedback { font-size: 13px; font-weight: bold; color: #e67e22; min-height: 18px; opacity: 0; transition: opacity .2s; }
+  .stt-feedback.show { opacity: 1; }
   canvas {
     width: 100%; height: auto; display: block;
     border-radius: 10px; border: 4px solid #fff;
@@ -150,6 +177,17 @@
         </div>
       </div>
     </div>
+
+    <div class="options-panel">
+      <label class="opt-row">
+        <input type="checkbox" id="chk-continuous">
+        Continuous Straight
+      </label>
+      <div class="stt-box">
+        <div id="stt-transcript" class="stt-text"></div>
+        <div id="stt-feedback" class="stt-feedback"></div>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -227,6 +265,7 @@ let totalScore = 0;
 let levelTimerActive = false;
 let prevMoving = false;
 let engineTimer = null;
+let continuousMove = false;
 let lives = 5;
 let gameOver = false;
 let gamePaused = true;
@@ -257,10 +296,15 @@ function turnRight() {
   else { char.pendingTurn += 1; }
   ensureAudio(); playBlip(); showCommand("right");
 }
-function goStraight() { if (celebrating || gamePaused) return; char.moving = true; ensureAudio(); showCommand("straight"); }
+function goStraight() {
+  if (celebrating || gamePaused) return;
+  const chk = document.getElementById("chk-continuous");
+  continuousMove = chk && chk.checked;
+  char.moving = true; ensureAudio(); showCommand("straight");
+}
 function stopMoving() {
   if (celebrating || gamePaused) return;
-  char.moving = false; ensureAudio(); showCommand("stop");
+  continuousMove = false; char.moving = false; ensureAudio(); showCommand("stop");
 }
 
 window.turnLeft = turnLeft; window.turnRight = turnRight;
@@ -352,7 +396,7 @@ function update(dt) {
       if (char.col === destination.dest.col && char.row === destination.dest.row) {
         handleSuccess(); break;
       }
-      if (isIntersection(char.col, char.row)) {
+      if (isIntersection(char.col, char.row) && !continuousMove) {
         char.moving = false;
         break;
       }
@@ -480,7 +524,7 @@ function handleCaught() {
   if (lives <= 0) { handleGameOver(); return; }
   caughtByGhost = true;
   celebrating = true;
-  char.moving = false;
+  char.moving = false; continuousMove = false;
   ensureAudio(); playCaught();
   const banner = document.getElementById("banner");
   const msg = banner.querySelector(".msg");
@@ -504,7 +548,7 @@ function handleCaught() {
 
 function handleGameOver() {
   gameOver = true; celebrating = true; levelTimerActive = false;
-  char.moving = false; stopEngine(); stopBGM();
+  char.moving = false; continuousMove = false; stopEngine(); stopBGM();
   ensureAudio(); playCaught();
   document.getElementById("goScore").textContent = "最終スコア: " + totalScore + " 点";
   document.getElementById("gameOver").classList.add("show");
@@ -1120,20 +1164,48 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
   }
 
   let lastFiredKey = null;
+  let transcriptTimer = null;
+  const sttEl = document.getElementById("stt-transcript");
+  const fbEl  = document.getElementById("stt-feedback");
+  let fbTimer = null;
+
+  function showTranscript(text, state) {
+    if (!sttEl) return;
+    sttEl.textContent = text;
+    sttEl.className = "stt-text " + state;
+    clearTimeout(transcriptTimer);
+    transcriptTimer = setTimeout(() => { sttEl.textContent = ""; sttEl.className = "stt-text"; }, 3000);
+  }
+  function showFeedback(text) {
+    if (!fbEl) return;
+    fbEl.textContent = text;
+    fbEl.classList.add("show");
+    clearTimeout(fbTimer);
+    fbTimer = setTimeout(() => { fbEl.classList.remove("show"); }, 2000);
+  }
+
   rec.onresult = (ev) => {
     if (!active) return;
     const resIdx = ev.resultIndex;
     const alts = ev.results[resIdx];
+    const isFinal = alts.isFinal;
+    const topText = alts[0].transcript.trim();
     let cmd = null;
     for (let i = 0; i < alts.length; i++) {
       const t = alts[i].transcript.toLowerCase().trim();
       cmd = matchCommand(t);
       if (cmd) break;
     }
-    if (!cmd) return;
+    if (isFinal && !cmd) {
+      showTranscript(topText, "unmatched");
+      showFeedback("❓ Not understood");
+      return;
+    }
+    if (!cmd) { showTranscript(topText, "interim"); return; }
+    showTranscript(topText, "matched");
     const key = `${resIdx}:${cmd}`;
     if (key === lastFiredKey) return;
-    if (celebrating || gamePaused) return; // don't consume key slot while blocked
+    if (celebrating || gamePaused) return;
     lastFiredKey = key;
     if      (cmd === "left")     turnLeft();
     else if (cmd === "right")    turnRight();
