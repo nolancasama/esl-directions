@@ -1195,11 +1195,15 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
     });
   }
 
+  // Decoupled single-keyword match (verb optional) — mirrors put-on's keyword-anywhere
+  // approach. The discriminating direction word alone fires the command; "turn"/"go" are
+  // not required, so "turn left", "go to the left", or a bare "left" all match. Variants
+  // cover common ESL/STT mishearings (l/r swaps, dropped /str/ cluster, added vowels).
   const CMD_WORDS = [
-    ["left",     ["turn left", "turned left", "torn left", "tern left", "tun left", "go left"]],
-    ["right",    ["turn right", "turned right", "torn right", "tern right", "tun right", "go right", "turn light", "torn light", "go light"]],
-    ["straight", ["go straight", "go strait", "go strate", "go straight ahead", "straight ahead", "go ahead", "go estrait"]],
-    ["stop",     ["stop", "estop"]],
+    ["left",     ["left", "lefto", "reft", "refto", "lef"]],
+    ["right",    ["right", "rite", "write", "wright", "light", "lite", "raito"]],
+    ["straight", ["straight", "strait", "strate", "estrait", "straights", "ahead", "forward"]],
+    ["stop",     ["stop", "estop", "stopu", "stoppu"]],
   ];
   // Pre-compile with word boundaries; find last match so merged transcripts pick most recent command
   const CMD_PATTERNS = CMD_WORDS.map(([cmd, phrases]) => [
