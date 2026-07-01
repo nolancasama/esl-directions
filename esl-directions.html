@@ -1200,10 +1200,10 @@ document.querySelector('.canvas-wrap').addEventListener('click', (e) => {
   // not required, so "turn left", "go to the left", or a bare "left" all match. Variants
   // cover common ESL/STT mishearings (l/r swaps, dropped /str/ cluster, added vowels).
   const CMD_WORDS = [
-    ["left",     ["left", "lefto", "reft", "refto", "lef"]],
-    ["right",    ["right", "rite", "write", "wright", "light", "lite", "raito"]],
-    ["straight", ["straight", "strait", "strate", "estrait", "straights", "ahead", "forward"]],
-    ["stop",     ["stop", "estop", "stopu", "stoppu"]],
+    ["left",     ["left", "lefto", "leftu", "reft", "refto", "lef"]],
+    ["right",    ["right", "rite", "wright", "light", "lite", "raito", "righto", "rito", "ryto"]],
+    ["straight", ["straight", "strait", "strate", "estrait", "straights", "ahead", "forward", "street", "ghost rider", "ghost raider"]],
+    ["stop",     ["stop", "estop", "stopu", "stoppu", "su top"]],
   ];
   // Pre-compile with word boundaries; find last match so merged transcripts pick most recent command
   const CMD_PATTERNS = CMD_WORDS.map(([cmd, phrases]) => [
